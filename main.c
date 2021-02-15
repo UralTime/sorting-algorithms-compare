@@ -3,31 +3,38 @@
 #include <time.h>
 #include <limits.h>
 
-inline void swap (long long *a, long long *b) {
+void swap (long long *a, long long *b) {
     long long tmp = *a;
     *a = *b;
     *b = tmp;
 }
 
-long long compare (const void *x1, const void *x2, char param) { // функция сравнения элементов массива для qsort
-    long long diff = *(long long*)x1 - *(long long*)x2;
-    if (param == 2)
-        return -diff;
-    else
-        return diff;
+int compare1 (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по неубыванию
+    long long diff = *(long long*)x1 - *(long long *)x2;
+    if (diff > 0)
+        return 1;
+    if (diff < 0)
+        return -1;
+    return 0;
 }
 
-void PsevdoRandom (long long *a, unsigned n, char param) { // генерация массива
+int compare2 (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по невозрастанию
+    return compare1(x2, x1);
+}
+
+void PsevdoRandom (long long *a, int n, int param) { // генерация массива
     srand(time(NULL));
-    for (unsigned i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
         a[i] = rand() * rand() * rand() * rand() * rand();
-    if (param == 1 || param == 2) // отсортированный
-        qsort(a, n, sizeof(long long), compare);
+    if (param == 1) // нужен отсортированный по неубыванию
+        qsort(a, n, sizeof(long long), compare1);
+    else if (param == 2) // нужен отсортированный по невозрастанию
+        qsort(a, n, sizeof(long long), compare2);
 }
 
 unsigned long long cntcompares = 0, cntmoves = 0; // было сказано, что можно глобальные переменные (удобно для рекурсивного qsort)
 
-inline unsigned long long AbsCompare (long long x1, long long x2, char test) {
+int AbsCompare (long long x1, long long x2, unsigned test) {
     cntcompares += test;
     if (x1 == LLONG_MIN) // самый большой модуль
         if (x2 == LLONG_MIN)
@@ -41,9 +48,9 @@ inline unsigned long long AbsCompare (long long x1, long long x2, char test) {
     return (absdiff > 0)? 1: 0;
 }
 
-void BubbleSort (long long *a, unsigned n) {
-    for (unsigned i = 1; i < n; i++)
-        for (unsigned j = n - 1; j >= i; --j) //самый маленький элемент спускается вниз
+void BubbleSort (long long *a, int n) {
+    for (int i = 1; i < n; i++)
+        for (int j = n - 1; j >= i; --j) //самый маленький элемент спускается вниз
             if (AbsCompare(a[j - 1], a[j], 1)) {
                 swap(a + j - 1, a + j);
                 cntmoves++;
@@ -76,32 +83,32 @@ void QuickSort (long long *a, int n) {
     qSort(a, 0, n - 1); // была бага с unsigned при n == 1
 }
 
-char TestFailed (long long *a, unsigned n) {
-    for (unsigned i = 1; i < n; i++)
+int TestFailed (long long *a, int n) {
+    for (int i = 1; i < n; i++)
         if (AbsCompare(a[i - 1], a[i], 0)) // неупорядочено по неубыванию модулей
             return 1;
     return 0;
 }
 
 int main (void) {
-    unsigned n, param;
+    int n, param;
     printf("Please enter a size of array...\n");
     scanf("%u", &n);
     printf("If you want data ordered ascending - press 1, reverse (descending) - press 2, random - press 3 or 4\n");
     scanf("%u", &param);
     long long *a = malloc(n * sizeof(long long));
     PsevdoRandom(a, n, param);
-    BubbleSort(a, n);
-    if (TestFailed(a, n))
-        printf("Your sort is failed! Please check BubbleSort's realisation!\n");
-    else
-        printf("You're god damn right! BubbleSort done %llu compares and %llu moves\n", cntcompares, cntmoves);
-    cntcompares = 0; cntmoves = 0;
-    PsevdoRandom(a, n, param);
     QuickSort(a, n);
     if (TestFailed(a, n))
         printf("Your sort is failed! Please check QuickSort's realisation!\n");
     else
         printf("You're god damn right! QuickSort done %llu compares and %llu moves\n", cntcompares, cntmoves);
+    cntcompares = 0; cntmoves = 0;
+    PsevdoRandom(a, n, param);
+    BubbleSort(a, n);
+    if (TestFailed(a, n))
+        printf("Your sort is failed! Please check BubbleSort's realisation!\n");
+    else
+        printf("You're god damn right! BubbleSort done %llu compares and %llu moves\n", cntcompares, cntmoves);
     return 0;
 }
