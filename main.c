@@ -9,7 +9,11 @@ void swap (long long *a, long long *b) {
     *b = tmp;
 }
 
-int compare1 (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по неубыванию
+/* Для библиотечной qsort ф-ия compare должна возвращать (если по неубыванию сорт):
+Если arg1 меньше, чем arg2, то возвращается значение меньше 0.
+Если arg1 равно arg2, то возвращается 0.
+Если arg1 больше, чем arg2, то возвращается величина больше 0.*/
+int compareIncrease (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по неубыванию
     long long diff = *(long long*)x1 - *(long long *)x2;
     if (diff > 0)
         return 1;
@@ -18,23 +22,27 @@ int compare1 (const void *x1, const void *x2) { // функция сравнен
     return 0;
 }
 
-int compare2 (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по невозрастанию
-    return compare1(x2, x1);
+int compareDecrease (const void *x1, const void *x2) { // функция сравнения элементов массива для qsort по невозрастанию
+    return compareIncrease(x2, x1);
 }
 
-void PsevdoRandom (long long *a, int n, int param) { // генерация массива
+void arrayGeneration (long long *a, int n, int param) { // генерация массива
     srand(time(NULL));
     for (int i = 0; i < n; i++)
-        a[i] = rand() * rand() * rand() * rand() * rand();
+        for (int j = 0; j < 5; j++)
+            a[i] *= (long long) rand();
+    /* Далее, для получения случайных чисел использовать функции rand(), возвращающую случайное
+    целое число в диапазоне от 0 до RAND_MAX. Как правило, эта константа равна 32767.
+    для генерации случайного 64-битного целого числа можно использовать выражение вида rand() * rand() * rand() * rand() * rand()*/
     if (param == 1) // нужен отсортированный по неубыванию
-        qsort(a, n, sizeof(long long), compare1);
+        qsort(a, n, sizeof(long long), compareIncrease);
     else if (param == 2) // нужен отсортированный по невозрастанию
-        qsort(a, n, sizeof(long long), compare2);
+        qsort(a, n, sizeof(long long), compareDecrease);
 }
 
 unsigned long long cntcompares = 0, cntmoves = 0; // было сказано, что можно глобальные переменные (удобно для рекурсивного qsort)
 
-int AbsCompare (long long x1, long long x2, unsigned test) {
+int absCompare (long long x1, long long x2, unsigned test) {
     cntcompares += test;
     if (x1 == LLONG_MIN) // самый большой модуль
         if (x2 == LLONG_MIN)
@@ -48,10 +56,10 @@ int AbsCompare (long long x1, long long x2, unsigned test) {
     return (absdiff > 0)? 1: 0;
 }
 
-void BubbleSort (long long *a, int n) {
+void bubbleSort (long long *a, int n) {
     for (int i = 1; i < n; i++)
         for (int j = n - 1; j >= i; --j) //самый маленький элемент спускается вниз
-            if (AbsCompare(a[j - 1], a[j], 1)) {
+            if (absCompare(a[j - 1], a[j], 1)) {
                 swap(a + j - 1, a + j);
                 cntmoves++;
             }
@@ -63,9 +71,9 @@ void qSort (long long *a, int left, int right) {
     int i = left, j = right; // была бага с unsigned из-за строчки 43 j > left при left = 0
     long long comp = a[(left + right) / 2]; // можно брать a[left + rand() % (j - i + 1)], но для надёжности оставим так
     do {
-        while (AbsCompare(comp, a[i], 1) && i < right)
+        while (absCompare(comp, a[i], 1) && i < right)
             i++; // теперь левая часть меньше comp
-        while (AbsCompare(a[j], comp, 1) && j > left)
+        while (absCompare(a[j], comp, 1) && j > left)
             j--; // теперь правая часть больше comp
         if (i <= j) { // есть элементы, на которых порядок нарушился
             swap(a + i, a + j);
@@ -79,15 +87,15 @@ void qSort (long long *a, int left, int right) {
         qSort(a, i, right); // сортируем правую часть
 }
 
-void QuickSort (long long *a, int n) {
+void quickSort (long long *a, int n) { // Функции не имеют возвращаемых значений и принимают по два параметра: число n и массив a
     qSort(a, 0, n - 1); // была бага с unsigned при n == 1
 }
 
-int TestFailed (long long *a, int n) {
+int checkArrayAbsAscending (long long *a, int n) {
     for (int i = 1; i < n; i++)
-        if (AbsCompare(a[i - 1], a[i], 0)) // неупорядочено по неубыванию модулей
-            return 1;
-    return 0;
+        if (absCompare(a[i - 1], a[i], 0)) // не упорядочено по неубыванию модулей :(
+            return 0;
+    return 1;
 }
 
 int main (void) {
@@ -97,18 +105,21 @@ int main (void) {
     printf("If you want data ordered ascending - press 1, reverse (descending) - press 2, random - press 3 or 4\n");
     scanf("%u", &param);
     long long *a = malloc(n * sizeof(long long));
-    PsevdoRandom(a, n, param);
-    QuickSort(a, n);
-    if (TestFailed(a, n))
-        printf("Your sort is failed! Please check QuickSort's realisation!\n");
-    else
+    // Значение N в зависимости от варианта задания либо фиксировано, либо память под массив следует выделять динамически (рекомендуется последнее)
+    arrayGeneration(a, n, param);
+    quickSort(a, n);
+    if (checkArrayAbsAscending(a, n))
         printf("You're god damn right! QuickSort done %llu compares and %llu moves\n", cntcompares, cntmoves);
-    cntcompares = 0; cntmoves = 0;
-    PsevdoRandom(a, n, param);
-    BubbleSort(a, n);
-    if (TestFailed(a, n))
-        printf("Your sort is failed! Please check BubbleSort's realisation!\n");
     else
+        printf("Your sort is failed! Please check QuickSort's realisation!\n");
+    cntcompares = 0;
+    cntmoves = 0;
+    arrayGeneration(a, n, param);
+    bubbleSort(a, n);
+    if (checkArrayAbsAscending(a, n))
         printf("You're god damn right! BubbleSort done %llu compares and %llu moves\n", cntcompares, cntmoves);
+    else
+        printf("Your sort is failed! Please check BubbleSort's realisation!\n");
+    free(a); // не забываем почистить за собой
     return 0;
 }
