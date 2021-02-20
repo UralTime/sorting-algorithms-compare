@@ -29,13 +29,18 @@ int compareDecrease (const void *x1, const void *x2) {
 }
 
 void arrayGeneration (long long *a, int n, int param) { // генерация массива
-    srand(time(NULL));
+    srand(time(NULL)); // запускаем псевдорандом
     for (int i = 0; i < n; i++) {
-        a[i] = (long long) rand();
-        for (int j = 1; j <= 7; j++) { // формируем случайное число по байтам
-            a[i] *= 256;
-            a[i] += rand() % 256;
+        a[i] = rand() % 2; // от 0 до 32767 == RAND_MAX как раз поровну чёт/нечет 
+        for (int j = 1; j <= 62; j++) { // формируем младшие 63 бита
+            a[i] <<= 1;
+            a[i] += rand() % 2;
         }
+        if (rand() % 2 == 1)// в старшем бите ставим единицу
+            a[i] += LLONG_MIN;
+        /* то есть в допкоде имеем не x (например, 111 == 7), 
+        а x - 2^63 (1111 == -1 == 7 - 2^3)
+        иначе в старшем бите 0 и это само число x (0111 = 7) */
     }
     if (param == 1) // нужен отсортированный по неубыванию
         qsort(a, n, sizeof(long long), compareIncrease);
